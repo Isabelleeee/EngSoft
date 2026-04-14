@@ -1,38 +1,49 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
-
+# Nome do fluxo de trabalho no GitHub Actions
 name: Build and deploy Python app to Azure Web App - AumigoPeludo
 
+# Define os eventos que disparam o workflow
 on:
+  # Dispara quando há um push na branch 'main'
   push:
     branches:
       - main
+  # Permite a execução manual pela interface do GitHub
   workflow_dispatch:
 
+# Agrupamento de todas as tarefas do workflow
 jobs:
+  # Início do job de construção (Build)
   build:
+    # Máquina virtual onde o job será executado
     runs-on: ubuntu-latest
+    # Permissões de leitura para o conteúdo do repositório
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
+    # Lista de passos que serão executados sequencialmente
     steps:
+      # NOVO PASSO: Imprime uma mensagem de boas-vindas no console do GitHub
+      - name: Mensagem de Inicio
+        run: echo "Iniciando o deploy do meu projeto!"
+
+      # Baixa o código do seu repositório para o servidor do GitHub
       - uses: actions/checkout@v4
 
+      # Configura o interpretador Python na versão 3.14
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
 
-      # 🛠️ Local Build Section (Optional)
-      # The following section in your workflow is designed to catch build issues early on the client side, before deployment. This can be helpful for debugging and validation. However, if this step significantly increases deployment time and early detection is not critical for your workflow, you may remove this section to streamline the deployment process.
+      # Cria um ambiente virtual e instala as bibliotecas do requirements.txt
       - name: Create and Start virtual environment and Install dependencies
         run: |
           python -m venv antenv
           source antenv/bin/activate
           pip install -r requirements.txt
                 
-      # By default, when you enable GitHub CI/CD integration through the Azure portal, the platform automatically sets the SCM_DO_BUILD_DURING_DEPLOYMENT application setting to true. This triggers the use of Oryx, a build engine that handles application compilation and dependency installation (e.g., pip install) directly on the platform during deployment. Hence, we exclude the antenv virtual environment directory from the deployment artifact to reduce the payload size. 
+      # Salva o código como um artefato (pacote) chamado 'python-app'
+      # Exclui a pasta 'antenv' para evitar arquivos desnecessários no deploy
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
@@ -41,25 +52,25 @@ jobs:
             .
             !antenv/
 
-      # 🚫 Opting Out of Oryx Build
-      # If you prefer to disable the Oryx build process during deployment, follow these steps:
-      # 1. Remove the SCM_DO_BUILD_DURING_DEPLOYMENT app setting from your Azure App Service Environment variables.
-      # 2. Refer to sample workflows for alternative deployment strategies: https://github.com/Azure/actions-workflow-samples/tree/master/AppService
-      
-
+  # Início do job de implantação (Deploy)
   deploy:
+    # Executa em Ubuntu
     runs-on: ubuntu-latest
+    # Define que este job só roda se o 'build' terminar com sucesso
     needs: build
+    # Permissões para autenticação OIDC e leitura de arquivos
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
 
     steps:
+      # Recupera o pacote 'python-app' que foi salvo no job anterior
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: python-app
       
+      # Autentica no Azure usando os IDs de Cliente, Tenant e Assinatura (armazenados nos Secrets)
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -67,10 +78,10 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6DDCDCA913314395AC735D84398F4D12 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_D94CD746279C43B392E0A60D6379181F }}
 
+      # Envia o código para o serviço de Web App chamado 'AumigoPeludo' no Azure
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'AumigoPeludo'
           slot-name: 'Production'
-          
